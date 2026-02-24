@@ -11,8 +11,9 @@ VIDEO_URL = "https://www.youtube.com/watch?v=N22Vd0DY3Lw&autoplay=1&mute=1"
 
 RUNS_PER_BROWSER = 30
 STABILIZATION_TIME = 15      # seconds before measurement
-MEASUREMENT_SECONDS = 300     # measurement duration in seconds
-COOLDOWN_TIME = 120          # seconds between runs
+MEASUREMENT_SECONDS = 180    # measurement duration in seconds
+COOLDOWN_TIME = 60          # seconds between runs
+WARM_UP_TIME = 300
 
 BROWSERS = ["Brave", "Chrome", "Firefox"]
 
@@ -39,7 +40,7 @@ def launch_browser(browser, url):
             "open", "-n", "-a", "Google Chrome",
             "--args",
             "--autoplay-policy=no-user-gesture-required",
-            f"--app={url}"   # <--- FIX 1: Forces a fresh, single-window kiosk mode
+            f"--app={url}"   
         ]
         process_name = "Google Chrome"
 
@@ -73,16 +74,17 @@ def main():
 
     run_counts = {browser: 0 for browser in BROWSERS}
 
-    warm_up(120)  
+    warm_up(WARM_UP_TIME)  
 
-    print("Starting automated browser energy benchmark...\n")
+    print("Starting automated browser energy benchmark using Energibridge...\n")
 
     for overall_index, browser in enumerate(executions):
 
         run_counts[browser] += 1
         current_run = run_counts[browser]
 
-        output_filename = f"power_data_{browser}_run{current_run}.txt"
+        # Changed to .csv for Energibridge
+        output_filename = f"power_data_{browser}_run{current_run}.csv"
 
         print(f"\nOverall {overall_index+1}/{len(executions)}")
         print(f"Testing {browser} (Run {current_run}/{RUNS_PER_BROWSER})")
@@ -92,33 +94,32 @@ def main():
         print(f"Waiting {STABILIZATION_TIME}s for stabilization...")
         time.sleep(STABILIZATION_TIME)
 
-        # Powermetrics command
-        powermetrics_cmd = [
-            "powermetrics",
-            "--samplers", "tasks,cpu_power,gpu_power",
-            "-i", "1000",
-            "-n", str(MEASUREMENT_SECONDS)
+        # ===============================
+        # ENERGIBRIDGE COMMAND
+        # ===============================
+        energibridge_cmd = [
+            "energibridge",
+            "-o", output_filename,
+            "--summary",
+            "-m", str(MEASUREMENT_SECONDS)
         ]
 
         print(f"Recording power data to {output_filename} for {MEASUREMENT_SECONDS} seconds...")
 
-        with open(output_filename, "w") as outfile:
-            subprocess.run(powermetrics_cmd, stdout=outfile, stderr=subprocess.DEVNULL)
+        subprocess.run(energibridge_cmd)
 
         print(f"Closing {browser} cleanly...")
         
         subprocess.run(["osascript", "-e", f'quit app "{process_name}"'])
         
-        # Give the browser 2 seconds to save its state and close its windows
         time.sleep(15)
         
-        # Safety net: Force kill any invisible background helper processes that got stuck
         subprocess.run(["killall", process_name], stderr=subprocess.DEVNULL)
 
         print(f"Cooling down for {COOLDOWN_TIME} seconds...")
         time.sleep(COOLDOWN_TIME)
 
-    print("Data collection complete!")
+    print("\nData collection complete!")
 
 if __name__ == "__main__":
     main()
