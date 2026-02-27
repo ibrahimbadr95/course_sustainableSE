@@ -1,8 +1,8 @@
 ---
-author: Radu Chiriac, Adomas Bagdonas, ...
+author: Radu Chiriac, Adomas Bagdonas, Ibrahim Badr, Deon Saji
 group_number: 13
 title: "Comparison of Different Browsers in Terms of Power Efficiency for Streaming Video"
-image: "img/gX_template/project_cover.png"
+image: "img/g13_report/project_cover.png"
 date: 27/02/2026
 summary: |-
   This study compares the energy efficiency of three major web browsers
@@ -105,6 +105,37 @@ Browser versions:
 - Brave Browser 1.87.191
 
 The experiment automation and data processing were implemented in Python 3.14. Energy measurements were collected using EnergiBridge 0.0.7.
+
+---
+
+### Automation & Implementation
+
+To ensure reproducibility and eliminate human-induced timing errors, the entire experiment was automated in Python. Even a few seconds of inconsistency between browser launches could introduce measurement noise larger than the differences we aimed to detect. Automation also made it practical to complete all 90 trials (30 per browser) without any operator interaction, preventing fatigue or distraction from influencing the results.
+
+**System preparation.** Before any measurement begins, the script handles two critical setup steps. First, it programmatically locks screen brightness to 50% using macOS's private `DisplayServices` framework. This guarantees a constant and reproducible display power load across every run, regardless of ambient light or system defaults:
+
+
+Second, a predefined list of common background applications: Slack, Spotify, Discord, OneDrive, Zoom, and others, is automatically detected and quit via AppleScript before measurements start, removing a major source of background CPU and network noise.
+
+**CPU warm-up.** After setup, the system runs a 5-minute warm-up phase by computing Fibonacci numbers in a tight loop. This stabilises CPU clock frequency and thermal state before any browser is launched, preventing cold-start thermal effects from skewing the first few runs of the session.
+
+**Randomised execution order.** Rather than testing all 30 Chrome runs consecutively, followed by Firefox and then Brave, the script builds a flat list of all 90 executions and shuffles it uniformly at random:
+
+```python
+executions = BROWSERS * RUNS_PER_BROWSER
+random.shuffle(executions)
+```
+
+This is an important design decision: it distributes any time-of-day effects, OS maintenance tasks, thermal drift, or gradual system fluctuations evenly across all three browsers, rather than systematically biasing one group.
+
+**Per-run pipeline.** Each individual trial follows a fixed sequence: (1) the target browser is launched with the fixed YouTube URL and autoplay flags to ensure playback starts immediately. (2) a 15-second stabilisation window allows the browser to fully initialise and begin streaming before measurement starts, avoiding startup energy spikes. (3) EnergiBridge is invoked as a subprocess for exactly 180 seconds, writing timestamped power readings to a per-run CSV file. (4) the browser is closed gracefully via AppleScript, followed by a `killall` call to guarantee a clean process state. (5) a 60-second cooldown allows the system to return to baseline before the next trial begins.
+
+```python
+energibridge_cmd = ["energibridge", "-o", output_filename, "--summary", "sleep", str(MEASUREMENT_SECONDS)]
+proc = subprocess.Popen(energibridge_cmd)
+```
+
+After all 90 runs complete, the script restores the original brightness and relaunches any applications that were quit at the start, leaving the machine in its original state. The full automation script, raw CSV measurement files, and analysis code are available in the replication package file.
 
 ---
 
