@@ -1,5 +1,5 @@
 ---
-layout: project
+layout: blog_post
 author: Radu Chiriac, Adomas Bagdonas, ...
 group_number: 13
 title: "Comparison of Different Browsers in Terms of Power Efficiency for Streaming Video"
@@ -113,7 +113,11 @@ The experiment automation and data processing were implemented in Python 3.14. E
 
 After running the experiment, we obtained 30 runs per browser. Power samples (every ~0.2 seconds) were integrated using the trapezoidal rule (`np.trapezoid`) to estimate energy in Joules. Energy was then divided by runtime to compute average power.
 
+{% if jekyll %}
+![Figure 1: Average power consumption per browser]({{ '/2026/p1_measuring_software/img/g13_report/experiment_results.png' | relative_url }})
+{% else %}
 ![Figure 1: Average power consumption per browser](img/g13_report/experiment_results.png)
+{% endif %}
 
 Brave had the lowest recorded power usage (4.7 W) and the lowest median (5.87 W), but also the highest interquartile range (0.95). Firefox had the second lowest median (6.05 W) and the lowest IQR (0.74). Chrome had the highest recorded measurement (8.03 W) and the highest median (6.45 W).
 
