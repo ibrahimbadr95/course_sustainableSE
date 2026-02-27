@@ -1,5 +1,4 @@
 ---
-layout: blog_post
 author: Radu Chiriac, Adomas Bagdonas, ...
 group_number: 13
 title: "Comparison of Different Browsers in Terms of Power Efficiency for Streaming Video"
